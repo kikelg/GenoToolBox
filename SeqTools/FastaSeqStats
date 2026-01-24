@@ -258,7 +258,7 @@ Flags:
   -i <input_fasta>          Input FASTA file (plain or gzipped) (mandatory)
   -o <output>               Save report to file (also printed to STDOUT)
   -l <lengths>              Print sequence lengths to file
-  -h <help>                 Print this help message
+  -h                        Print this help message
 
 EOF
 exit (1);
