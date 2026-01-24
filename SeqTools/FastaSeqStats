@@ -43,8 +43,8 @@ It will print the following stats:
  Longest sequence:    Length   ID
  Shortest sequence:   Length   ID
  Average length:      Length
- Number of Ns:        Count    Percentaje
- GCs:                 Percentaje
+ Number of Ns:        Count    Percentage
+ GC:                  Percentage
  N95:                 Length   Index (L95)
  N90:                 Length   Index (L90)
  N75:                 Length   Index (L75)
