@@ -16,7 +16,7 @@ FastaSeqStats [-h] -i <input_fasta> [-o <output>] [-l <lengths>]
 
 =item -i <input_fasta>
 
-Input fasta file (plain or gzipped) (mandatory)
+Input FASTA file (plain or gzipped) (mandatory)
 
 =item -o <output>
 
@@ -34,7 +34,7 @@ Print this help message
 
 =head1 DESCRIPTION
 
-A script to get the stats and the sequence length of each sequence of a fasta file.
+A script to get the stats and the sequence length of each sequence of a FASTA file.
 
 It will print the following stats:
 
@@ -252,10 +252,10 @@ Usage:
   FastaSeqStats.pl [-h] [-i <input_fasta>] [-o <output>] [-l <lengths>]
 
 Description:
-  A script to get the stats and the sequence length of each sequence of a fasta file.
+  A script to get the stats and the sequence length of each sequence of a FASTA file.
 
 Flags:
-  -i <input_fasta>          Input fasta file (plain or gzipped) (mandatory)
+  -i <input_fasta>          Input FASTA file (plain or gzipped) (mandatory)
   -o <output>               Save report to file (also printed to STDOUT)
   -l <lengths>              Print sequence lengths to file
   -h <help>                 Print this help message
