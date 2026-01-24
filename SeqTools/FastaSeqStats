@@ -249,7 +249,7 @@ sub help {
 print STDERR <<EOF;
 
 Usage:
-  FastaSeqStats.pl [-h] [-i <input_fasta>] [-o <report>] [-l <lengths>]
+  FastaSeqStats.pl [-h] [-i <input_fasta>] [-o <output>] [-l <lengths>]
 
 Description:
   A script to get the stats and the sequence length of each sequence of a fasta file.
