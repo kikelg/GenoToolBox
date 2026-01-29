@@ -71,22 +71,27 @@ use strict;
 use warnings;
 use Getopt::Std;
 
+
 ## BioPerl
 use Bio::SeqIO;
+
 
 ## Var and checks
 our ($opt_i, $opt_o, $opt_l, $opt_h);
 getopts("i:o:l:h") or help();
 
 if ($opt_h) {
-    help();
+	help();
 }
 
 my $infasta = $opt_i;
-
 if (!$opt_i) {
-    print STDERR "ERROR: -i <input_fasta> option is mandatory.\n";
-    help();
+	print STDERR "ERROR: -i <input_fasta> option is mandatory.\n";
+	help();
+}
+if (! -e $infasta) {
+	print STDERR "ERROR: file '$infasta' not found\n";
+	help();
 }
 
 my $out_report  = $opt_o;
@@ -98,21 +103,15 @@ my $gc_count = 0;
 my $atgc_count = 0;
 my $n_count  = 0;
 
-if (! -e $infasta) {
-    print STDERR "ERROR: file '$infasta' not found\n";
-    help();
-}
-
 
 ## Gzip detection
 my $seqio;
-
 if ($infasta =~ /\.gz$/) {
-		open my $fh, "-|", "gunzip", "-c", $infasta or die "Cannot gunzip $infasta: $!\n";
-		$seqio = Bio::SeqIO->new(-fh=>$fh, -format=>'fasta');
+	open my $fh, "-|", "gunzip", "-c", $infasta or die "Cannot gunzip $infasta: $!\n";
+	$seqio = Bio::SeqIO->new(-fh=>$fh, -format=>'fasta');
 }
 else {
-		$seqio = Bio::SeqIO->new(-file=>$infasta, -format => 'fasta');
+	$seqio = Bio::SeqIO->new(-file=>$infasta, -format => 'fasta');
 }
 
 
@@ -120,27 +119,26 @@ else {
 print STDERR "\n\n1) Parsing fasta file.\n\n";
 
 while(my $seqobj = $seqio->next_seq()) {
-    
-    my $id = $seqobj->id();
-    my $length = $seqobj->length();
-		my $seq = $seqobj->seq;
-
-    $total_length += $length;
-    $total_seq++;
-		$gc_count += ($seq =~ tr/GCgc//);
-		$atgc_count += ($seq =~ tr/ATGCatgc//);
-		$n_count  += ($seq =~ tr/Nn//);
-
-    print STDERR "\tProcessing sequence $id ($total_seq)      \r";
-
-    $length{$id} = $length;
+	my $id = $seqobj->id();
+	my $length = $seqobj->length();
+	my $seq = $seqobj->seq;
+	$total_length += $length;
+	$total_seq++;
+	$gc_count += ($seq =~ tr/GCgc//);
+	$atgc_count += ($seq =~ tr/ATGCatgc//);
+	$n_count  += ($seq =~ tr/Nn//);
+	print STDERR "\tProcessing sequence $id ($total_seq)      \r";
+	$length{$id} = $length;
 }
 print STDERR "\n\n";
 
+if ($total_seq == 0) {
+	die "ERROR: No sequences found in $infasta file\n";
+}
+
 print STDERR "\n\n2) Analyzing length distribution.\n";
 
-my ($N95l, $N90l, $N75l, $N50l, $N25l,
-    $N95i, $N90i, $N75i, $N50i, $N25i);
+my ($N95l, $N90l, $N75l, $N50l, $N25l, $N95i, $N90i, $N75i, $N50i, $N25i);
 
 my $t_n95 = $total_length * 95 / 100;
 my $t_n90 = $total_length * 90 / 100;
@@ -154,17 +152,38 @@ my $l_sum = 0;
 my $seq_n = 0;
 
 foreach my $id (@ord_ids) {
-    $l_sum += $length{$id};
-    $seq_n++;
-    if ($l_sum > $t_n25 && !$N25l) { $N25l = $length{$id}; $N25i = $seq_n; }
-    elsif ($l_sum > $t_n50 && !$N50l) { $N50l = $length{$id}; $N50i = $seq_n; }
-    elsif ($l_sum > $t_n75 && !$N75l) { $N75l = $length{$id}; $N75i = $seq_n; }
-    elsif ($l_sum > $t_n90 && !$N90l) { $N90l = $length{$id}; $N90i = $seq_n; }
-    elsif ($l_sum > $t_n95 && !$N95l) { $N95l = $length{$id}; $N95i = $seq_n; }
+	$l_sum += $length{$id};
+	$seq_n++;
+	if ($l_sum >= $t_n25 && !defined $N25l) {
+		$N25l = $length{$id};
+		$N25i = $seq_n;
+	}
+	if ($l_sum >= $t_n50 && !defined $N50l) {
+		$N50l = $length{$id};
+		$N50i = $seq_n;
+	}
+	if ($l_sum >= $t_n75 && !defined $N75l) {
+		$N75l = $length{$id};
+		$N75i = $seq_n;
+	}
+	if ($l_sum >= $t_n90 && !defined $N90l) {
+		$N90l = $length{$id};
+		$N90i = $seq_n;
+	}
+	if ($l_sum >= $t_n95 && !defined $N95l) {
+		$N95l = $length{$id};
+		$N95i = $seq_n;
+	}
 }
 
-my $max = $length{$ord_ids[0]};
-my $min = $length{$ord_ids[-1]};
+my $max_len = $length{$ord_ids[0]};
+my @max_ids = grep { $length{$_} == $max_len } @ord_ids;
+my $max_count = scalar @max_ids;
+
+my $min_len = $length{$ord_ids[-1]};
+my @min_ids = grep { $length{$_} == $min_len } @ord_ids;
+my $min_count = scalar @min_ids;
+
 my $avg = sprintf("%.2f", $total_length / $total_seq);
 my $gc_pct = sprintf("%.2f", $gc_count / $atgc_count * 100);
 my $n_pct = sprintf("%.2f", $n_count / $total_length * 100);
@@ -174,8 +193,16 @@ print STDOUT "\n= REPORT:                                                =\n";
 print STDOUT "==========================================================\n";
 print STDOUT "Sequence Count:\t\t$total_seq sequences\n";
 print STDOUT "Total Length:\t\t$total_length bp\n";
-print STDOUT "Longest sequence:\t$max bp\t(ID = $ord_ids[0])\n";
-print STDOUT "Shortest sequence:\t$min bp\t\t(ID = $ord_ids[-1])\n";
+if ($max_count == 1) {
+print STDOUT "Longest sequence:\t$max_len bp\t\t(ID = $max_ids[0])\n";
+} else {
+print STDOUT "Longest sequence:\t$max_len bp\t\t($max_count sequences, e.g. ID = $max_ids[0])\n";
+}
+if ($min_count == 1) {
+print STDOUT "Shortest sequence:\t$min_len bp\t\t(ID = $min_ids[0])\n";
+} else {
+print STDOUT "Shortest sequence:\t$min_len bp\t\t($min_count sequences, e.g. ID = $min_ids[0])\n";
+}
 print STDOUT "Average length:\t\t$avg bp\n";
 print STDOUT "Number of Ns:\t\t$n_count Ns\t\t($n_pct %)\n";
 print STDOUT "GC:\t\t\t$gc_pct %\t\t(G+C)/(A+T+G+C)\n";
@@ -197,50 +224,58 @@ my $stdout_fh;
 
 if (defined $out_report) {
 
-    print STDERR "\n\n*Output saved in $out_report file*\n";
+	print STDERR "\n\n*Output saved in $out_report file*\n";
 
-    my $tsv_file = $out_report;
+	my $tsv_file = $out_report;
 
-    open my $tsv_fh, '>', $tsv_file
-        or die "Cannot open TSV file $tsv_file\n";
+	open my $tsv_fh, '>', $tsv_file
+		or die "Cannot open TSV file $tsv_file\n";
 
-    print $tsv_fh join("\t",
-        "Metric",
-        "Value",
-        "Notes"
-    ) . "\n";
+	print $tsv_fh join("\t",
+		"Metric",
+		"Value",
+		"Notes"
+	) . "\n";
 
-    print $tsv_fh join("\t", "Sequence count", $total_seq, "sequences") . "\n";
-    print $tsv_fh join("\t", "Total length", $total_length, "bp") . "\n";
-    print $tsv_fh join("\t", "Longest sequence (bp)", $max, "$ord_ids[0]") . "\n";
-    print $tsv_fh join("\t", "Shortest sequence (bp)", $min, "$ord_ids[-1]") . "\n";
-    print $tsv_fh join("\t", "Average length", $avg, "bp") . "\n";
-    print $tsv_fh join("\t", "Number of Ns", $n_count, "$n_pct %") . "\n";
-    print $tsv_fh join("\t", "GC (%)", "$gc_pct", "(G+C)/(A+T+G+C)") . "\n";
-    print $tsv_fh join("\t", "N95", $N95l, "bp") . "\n";
-    print $tsv_fh join("\t", "L95", $N95i, "sequences") . "\n";
-    print $tsv_fh join("\t", "N90", $N90l, "bp") . "\n";
-    print $tsv_fh join("\t", "L90", $N90i, "sequences") . "\n";
-    print $tsv_fh join("\t", "N75", $N75l, "bp") . "\n";
-    print $tsv_fh join("\t", "L75", $N75i, "sequences") . "\n";
-    print $tsv_fh join("\t", "N50", $N50l, "bp") . "\n";
-    print $tsv_fh join("\t", "L50", $N50i, "sequences") . "\n";
-    print $tsv_fh join("\t", "N25", $N25l, "bp") . "\n";
-    print $tsv_fh join("\t", "L25", $N25i, "sequences") . "\n";
+	print $tsv_fh join("\t", "Sequence count", $total_seq, "sequences") . "\n";
+	print $tsv_fh join("\t", "Total length", $total_length, "bp") . "\n";
+	if ($max_count == 1) {
+		print $tsv_fh join("\t", "Longest sequence (bp)", $max_len, "$max_ids[0]") . "\n";
+	} else {
+		print $tsv_fh join("\t", "Longest sequence (bp)", $max_len, "$max_count sequences, e.g. ID = $max_ids[0]") . "\n";
+	}
+	if ($min_count == 1) {
+		print $tsv_fh join("\t", "Shortest sequence (bp)", $min_len, "$min_ids[0]") . "\n";
+	} else {
+		print $tsv_fh join("\t", "Shortest sequence (bp)", $min_len, "$min_count sequences, e.g. ID = $min_ids[0]") . "\n";
+	}
+	print $tsv_fh join("\t", "Average length", $avg, "bp") . "\n";
+	print $tsv_fh join("\t", "Number of Ns", $n_count, "$n_pct %") . "\n";
+	print $tsv_fh join("\t", "GC (%)", "$gc_pct", "(G+C)/(A+T+G+C)") . "\n";
+	print $tsv_fh join("\t", "N95", $N95l, "bp") . "\n";
+	print $tsv_fh join("\t", "L95", $N95i, "sequences") . "\n";
+	print $tsv_fh join("\t", "N90", $N90l, "bp") . "\n";
+	print $tsv_fh join("\t", "L90", $N90i, "sequences") . "\n";
+	print $tsv_fh join("\t", "N75", $N75l, "bp") . "\n";
+	print $tsv_fh join("\t", "L75", $N75i, "sequences") . "\n";
+	print $tsv_fh join("\t", "N50", $N50l, "bp") . "\n";
+	print $tsv_fh join("\t", "L50", $N50i, "sequences") . "\n";
+	print $tsv_fh join("\t", "N25", $N25l, "bp") . "\n";
+	print $tsv_fh join("\t", "L25", $N25i, "sequences") . "\n";
 
-    close $tsv_fh;
+	close $tsv_fh;
 }
 
 ## Length output (-l)
 if (defined $out_lengths) {
 
-    print STDERR "\n\n3) Length output enabled (-l).\n";
-    print STDERR "\n\n*Fasta lengths saved in $out_lengths file*\n";
+	print STDERR "\n\n3) Length output enabled (-l).\n";
+	print STDERR "\n\n*Fasta lengths saved in $out_lengths file*\n";
 
-    open my $ofh, '>', $out_lengths;
-    foreach my $id (@ord_ids) {
-        print $ofh "$id\t$length{$id}\n";
-    }
+	open my $ofh, '>', $out_lengths;
+	foreach my $id (@ord_ids) {
+		print $ofh "$id\t$length{$id}\n";
+	}
 }
 
 print STDERR "\n\nDONE\n\n";
@@ -249,16 +284,16 @@ sub help {
 print STDERR <<EOF;
 
 Usage:
-  FastaSeqStats.pl [-h] [-i <input_fasta>] [-o <output>] [-l <lengths>]
+	FastaSeqStats.pl [-h] [-i <input_fasta>] [-o <output>] [-l <lengths>]
 
 Description:
-  A script to get the stats and the sequence length of each sequence of a FASTA file.
+	A script to get the stats and the sequence length of each sequence of a FASTA file.
 
 Flags:
-  -i <input_fasta>          Input FASTA file (plain or gzipped) (mandatory)
-  -o <output>               Save report to file (also printed to STDOUT)
-  -l <lengths>              Print sequence lengths to file
-  -h                        Print this help message
+	-i <input_fasta>          Input FASTA file (plain or gzipped) (mandatory)
+	-o <output>               Save report to file (also printed to STDOUT)
+	-l <lengths>              Print sequence lengths to file
+	-h                        Print this help message
 
 EOF
 exit (1);
